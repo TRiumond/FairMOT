@@ -1,5 +1,5 @@
 ARG IMAGE_NAME
-FROM ${IMAGE_NAME}:10.2-runtime-ubuntu18.04
+FROM nvidia/cuda:10.2-runtime-ubuntu18.04
 LABEL maintainer "NVIDIA CORPORATION <cudatools@nvidia.com>"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y \
     sudo \
     git \
     bzip2 \
-    libx11-6 \
+    libx11-6 ffmpeg libsm6 libxext6 \
  && rm -rf /var/lib/apt/lists/*
 
 # Create a working directory
