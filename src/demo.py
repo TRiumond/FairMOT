@@ -6,9 +6,7 @@ import _init_paths
 
 import logging
 import os
-import os.path as osp
 from opts import opts
-from tracking_utils.utils import mkdir_if_missing
 from tracking_utils.log import logger
 import datasets.dataset.jde as datasets
 from track import TrackSqlSaver
@@ -20,18 +18,14 @@ def demo(opt):
     logger.info('Starting tracking...')
     dataloader = datasets.LoadVideo(opt.input_video, opt.img_size)
     frame_rate = dataloader.frame_rate
-    # eval_seq(opt, dataloader, 'mot', result_filename,
-    #          save_dir=frame_dir, show_image=False, frame_rate=frame_rate,
-    #          use_cuda=opt.gpus!=[-1])
-    # if opt.output_format == 'video':
-    #     output_video_path = osp.join(result_root, 'MOT16-03-results.mp4')
-    #     cmd_str = 'ffmpeg -f image2 -i {}/%05d.jpg -b 5000k -c:v mpeg4 {}'.format(osp.join(result_root, 'frame'), output_video_path)
-    #     os.system(cmd_str)
-
-    saver = TrackSqlSaver(db_name="tracking.db", table_name="tracker", tracking_session_id="123456", opt=opt,
-                          dataloader=dataloader
-                          , data_type="mot",
-                          frame_rate=frame_rate, use_cuda=opt.gpus != [-1])
+    saver = TrackSqlSaver(db_name=opt.database,
+                          table_name=opt.table_name,
+                          tracking_session_id=opt.session_id,
+                          opt=opt,
+                          dataloader=dataloader,
+                          data_type="mot",
+                          frame_rate=frame_rate,
+                          use_cuda=opt.gpus != [-1])
     saver.eval()
 
 
