@@ -21,6 +21,24 @@ import datasets.dataset.jde as datasets
 
 from tracking_utils.utils import mkdir_if_missing
 from opts import opts
+import sqlite3
+import json
+from json import JSONEncoder
+import numpy
+
+
+class NumpyArrayEncoder(JSONEncoder):
+    def default(self, obj):
+        types = ['float32', 'float64']
+        if obj.dtype.name in types:
+            obj = obj.astype(np.float64)
+        if isinstance(obj, numpy.ndarray):
+            if obj.dtype.name in types:
+                obj = obj.astype(np.float64)
+
+            return obj.tolist()
+
+        return JSONEncoder.default(self, obj)
 
 
 def write_results(filename, results, data_type):
@@ -67,6 +85,106 @@ def write_results_score(filename, results, data_type):
     logger.info('save results to {}'.format(filename))
 
 
+class TrackSaver(object):
+    def __init__(self, opt, dataloader, data_type, frame_rate=30, use_cuda=True):
+        self.opt = opt
+        self.dataloader = dataloader
+        self.data_type = data_type
+        self.use_cuda = use_cuda
+        self.frame_rate = frame_rate
+
+    def send_result(self, result, raw_img):
+        pass
+
+    def send_image(self, img0, online_tlwhs, online_ids, frame_id, fps):
+        return vis.plot_tracking(img0, online_tlwhs, online_ids, frame_id=frame_id, fps=fps)
+
+    def eval(self, skip_frame=1):
+        tracker = JDETracker(self.opt, frame_rate=self.frame_rate)
+        timer = Timer()
+        frame_id = 0
+
+        for i, (path, img, img0) in enumerate(self.dataloader):
+            if i % skip_frame != 0:
+                continue
+            if frame_id % 20 == 0:
+                logger.info('Processing frame {} ({:.2f} fps)'.format(frame_id, 1. / max(1e-5, timer.average_time)))
+
+            # run tracking
+            timer.tic()
+            if self.use_cuda:
+                blob = torch.from_numpy(img).cuda().unsqueeze(0)
+            else:
+                blob = torch.from_numpy(img).unsqueeze(0)
+            online_targets = tracker.update(blob, img0)
+            online_tlwhs = []
+            online_ids = []
+            online_scores = []
+            for t in online_targets:
+                tlwh = t.tlwh
+                tid = t.track_id
+                vertical = tlwh[2] / tlwh[3] > 1.6
+                if tlwh[2] * tlwh[3] > self.opt.min_box_area and not vertical:
+                    online_tlwhs.append(tlwh)
+                    online_ids.append(tid)
+                    online_scores.append(t.score)
+            timer.toc()
+            tmp_result = {"frame_id": frame_id + 1, "bounding_box": online_tlwhs, "ids": online_ids,
+                          "scores": online_scores}
+            self.send_result(tmp_result, raw_img=img0)
+
+            frame_id += 1
+
+        return frame_id, timer.average_time, timer.calls
+
+
+class TrackSqlSaver(TrackSaver):
+    def __init__(self, db_name: str, table_name: str, tracking_session_id: str, opt, dataloader, data_type: str,
+                 frame_rate: int = 30, use_cuda: bool = True):
+        TrackSaver.__init__(self, opt, dataloader, data_type, frame_rate, use_cuda)
+        self.db_name = db_name
+        self.table_name = table_name
+        self.db = sqlite3.connect(self.db_name)
+
+        self.tracking_session_id = tracking_session_id
+        self.cur = self.db.cursor()
+        self.schema = ["tracking_session_id",
+                       "frame_id",
+                       "bounding_box",
+                       "ids",
+                       "scores",
+                       "img"]
+        sql_create_table = """
+        CREATE TABLE IF NOT EXISTS %s (tracking_session_id string,
+                         frame_id integer,
+                         bounding_box string,
+                         ids string,
+                         scores string, 
+                         img blob)
+        """ % self.table_name
+
+        self.cur.execute(sql_create_table)
+        self.db.commit()
+
+    def send_result(self, result, raw_img):
+        _, enc = cv2.imencode(".png", raw_img)
+        frame_id = result['frame_id']
+        bounding_box = json.dumps(result['bounding_box'], cls=NumpyArrayEncoder)
+        ids = json.dumps(result['ids'], cls=NumpyArrayEncoder)
+        # scores = json.dumps(result['scores'], cls=NumpyArrayEncoder)
+        print(result['scores'])
+        scores = json.dumps(result['scores'])
+        self.cur.execute("insert into %s values(?,?,?,?,?,?)" % self.table_name, (self.tracking_session_id,
+                                                                                  frame_id,
+                                                                                  bounding_box,
+                                                                                  ids,
+                                                                                  scores,
+                                                                                  enc))
+        self.db.commit()
+        self.cur.execute('SELECT frame_id,scores  FROM %s ' % self.table_name)
+        print(self.cur.fetchone())
+
+
 def eval_seq(opt, dataloader, data_type, result_filename, save_dir=None, show_image=True, frame_rate=30, use_cuda=True):
     if save_dir:
         mkdir_if_missing(save_dir)
@@ -74,10 +192,10 @@ def eval_seq(opt, dataloader, data_type, result_filename, save_dir=None, show_im
     timer = Timer()
     results = []
     frame_id = 0
-    #for path, img, img0 in dataloader:
+    # for path, img, img0 in dataloader:
     for i, (path, img, img0) in enumerate(dataloader):
-        #if i % 8 != 0:
-            #continue
+        # if i % 8 != 0:
+        # continue
         if frame_id % 20 == 0:
             logger.info('Processing frame {} ({:.2f} fps)'.format(frame_id, 1. / max(1e-5, timer.average_time)))
 
@@ -90,7 +208,7 @@ def eval_seq(opt, dataloader, data_type, result_filename, save_dir=None, show_im
         online_targets = tracker.update(blob, img0)
         online_tlwhs = []
         online_ids = []
-        #online_scores = []
+        # online_scores = []
         for t in online_targets:
             tlwh = t.tlwh
             tid = t.track_id
@@ -98,7 +216,7 @@ def eval_seq(opt, dataloader, data_type, result_filename, save_dir=None, show_im
             if tlwh[2] * tlwh[3] > opt.min_box_area and not vertical:
                 online_tlwhs.append(tlwh)
                 online_ids.append(tid)
-                #online_scores.append(t.score)
+                # online_scores.append(t.score)
         timer.toc()
         # save results
         results.append((frame_id + 1, online_tlwhs, online_ids))
@@ -113,7 +231,7 @@ def eval_seq(opt, dataloader, data_type, result_filename, save_dir=None, show_im
         frame_id += 1
     # save results
     write_results(result_filename, results, data_type)
-    #write_results_score(result_filename, results, data_type)
+    # write_results_score(result_filename, results, data_type)
     return frame_id, timer.average_time, timer.calls
 
 
@@ -179,7 +297,7 @@ if __name__ == '__main__':
                       PETS09-S2L1
                       TUD-Campus
                       TUD-Stadtmitte'''
-        #seqs_str = '''TUD-Campus'''
+        # seqs_str = '''TUD-Campus'''
         data_root = os.path.join(opt.data_dir, 'MOT15/images/train')
     else:
         seqs_str = '''MOT16-02
@@ -198,8 +316,8 @@ if __name__ == '__main__':
                       MOT16-08
                       MOT16-12
                       MOT16-14'''
-        #seqs_str = '''MOT16-01 MOT16-07 MOT16-12 MOT16-14'''
-        #seqs_str = '''MOT16-06 MOT16-08'''
+        # seqs_str = '''MOT16-01 MOT16-07 MOT16-12 MOT16-14'''
+        # seqs_str = '''MOT16-06 MOT16-08'''
         data_root = os.path.join(opt.data_dir, 'MOT16/test')
     if opt.test_mot15:
         seqs_str = '''ADL-Rundle-1
