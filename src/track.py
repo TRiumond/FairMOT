@@ -99,7 +99,7 @@ class TrackSaver(object):
     def send_image(self, img0, online_tlwhs, online_ids, frame_id, fps):
         return vis.plot_tracking(img0, online_tlwhs, online_ids, frame_id=frame_id, fps=fps)
 
-    def eval(self, skip_frame=1):
+    def eval(self, skip_frame=1, show_image=False):
         tracker = JDETracker(self.opt, frame_rate=self.frame_rate)
         timer = Timer()
         frame_id = 0
@@ -134,6 +134,10 @@ class TrackSaver(object):
             self.send_result(tmp_result, raw_img=img0)
 
             frame_id += 1
+            if show_image:
+                online_im = self.send_image(img0, online_tlwhs, online_ids, frame_id,
+                                            1. / max(1e-5, timer.average_time))
+                cv2.imshow('Result', online_im)
 
         return frame_id, timer.average_time, timer.calls
 
