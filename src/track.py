@@ -173,7 +173,7 @@ class TrackSqlSaver(TrackSaver):
         ids = json.dumps(result['ids'], cls=NumpyArrayEncoder)
         # scores = json.dumps(result['scores'], cls=NumpyArrayEncoder)
         print(result['scores'])
-        scores = json.dumps(result['scores'])
+        scores = str(result['scores'])
         self.cur.execute("insert into %s values(?,?,?,?,?,?)" % self.table_name, (self.tracking_session_id,
                                                                                   frame_id,
                                                                                   bounding_box,
