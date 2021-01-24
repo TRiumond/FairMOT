@@ -1,6 +1,14 @@
 import os.path as osp
 import sys
 
+try:
+    import dcn_v2
+except ImportError:
+    import pip
+    pip.main(['install', '-e','git+https://github.com/CharlesShang/DCNv2#egg=DCNv2', '--user'])
+    sys.path.insert(0, "./src/dcnv2")
+    import dcn_v2
+
 def add_path(path):
     if path not in sys.path:
         sys.path.insert(0, path)
