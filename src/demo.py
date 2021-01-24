@@ -26,7 +26,7 @@ def demo(opt):
                           data_type="mot",
                           frame_rate=frame_rate,
                           use_cuda=opt.gpus != [-1])
-    saver.eval()
+    saver.eval(show_image=opt.show_image)
 
 
 if __name__ == '__main__':
