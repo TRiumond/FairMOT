@@ -171,8 +171,6 @@ class TrackSqlSaver(TrackSaver):
         frame_id = result['frame_id']
         bounding_box = json.dumps(result['bounding_box'], cls=NumpyArrayEncoder)
         ids = json.dumps(result['ids'], cls=NumpyArrayEncoder)
-        # scores = json.dumps(result['scores'], cls=NumpyArrayEncoder)
-        print(result['scores'])
         scores = str(result['scores'])
         self.cur.execute("insert into %s values(?,?,?,?,?,?)" % self.table_name, (self.tracking_session_id,
                                                                                   frame_id,
@@ -181,8 +179,6 @@ class TrackSqlSaver(TrackSaver):
                                                                                   scores,
                                                                                   enc))
         self.db.commit()
-        self.cur.execute('SELECT frame_id,scores  FROM %s ' % self.table_name)
-        print(self.cur.fetchone())
 
 
 def eval_seq(opt, dataloader, data_type, result_filename, save_dir=None, show_image=True, frame_rate=30, use_cuda=True):
@@ -220,7 +216,7 @@ def eval_seq(opt, dataloader, data_type, result_filename, save_dir=None, show_im
         timer.toc()
         # save results
         results.append((frame_id + 1, online_tlwhs, online_ids))
-        #results.append((frame_id + 1, online_tlwhs, online_ids, online_scores))
+        # results.append((frame_id + 1, online_tlwhs, online_ids, online_scores))
         if show_image or save_dir is not None:
             online_im = vis.plot_tracking(img0, online_tlwhs, online_ids, frame_id=frame_id,
                                           fps=1. / timer.average_time)
