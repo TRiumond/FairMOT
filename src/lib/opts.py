@@ -169,12 +169,13 @@ class opts(object):
         # Saver setting
         self.parser.add_argument('--database', type=str,
                                  help='get database setting', default="tracking")
-
         self.parser.add_argument('--table-name', type=str,
                                  help='get table_name setting', default='tracker')
-
         self.parser.add_argument('--session-id', type=str,
                                  help='get a session id', default=get_random_string(8))
+
+        self.parser.add_argument('--show-image', action='store_true',
+                                 help='show image', default=False)
 
     def parse(self, args=''):
         if args == '':
