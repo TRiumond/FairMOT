@@ -203,7 +203,10 @@ python demo.py mot --load_model ../models/fairmot_dla34.pth --conf_thres 0.4
 ```
 You can change --input-video and --output-root to get the demos of your own videos.
 --conf_thres can be set from 0.3 to 0.7 depending on your own videos.
-
+Or 
+```bash
+docker run --rm --gpus all -v $(pwd)/models:/models -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix   -it fairmot:1.0 python demo.py mot --load_model /models/fairmot_dla34.pth --conf_thres 0.4 --output-file /models/out.mp4
+```
 ## Train on custom dataset
 You can train FairMOT on custom dataset by following several steps bellow:
 1. Generate one txt label file for one image. Each line of the txt label file represents one object. The format of the line is: "class id x_center/img_width y_center/img_height w/img_width h/img_height". You can modify src/gen_labels_16.py to generate label files for your custom dataset.
