@@ -1,6 +1,7 @@
 ARG IMAGE_NAME
 FROM nvidia/cuda:10.2-runtime-ubuntu18.04
 LABEL maintainer "NVIDIA CORPORATION <cudatools@nvidia.com>"
+CMD nvidia-smi
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         cuda-nvml-dev-$CUDA_PKG_VERSION \
@@ -106,4 +107,5 @@ RUN mkdir -p /home/user/.cache/torch/checkpoints/ \
 
 COPY --chown=user:user . /home/user
 WORKDIR /home/user/src
+RUN pip install -e git+https://github.com/CharlesShang/DCNv2@c7f778f28b84c66d3af2bf16f19148a07051dac1#egg=DCNv2 --user
 CMD ["/bin/bash"]
