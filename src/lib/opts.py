@@ -177,6 +177,9 @@ class opts(object):
         self.parser.add_argument('--show-image', action='store_true',
                                  help='show image', default=False)
 
+        self.parser.add_argument('--output-file', type=str,
+                                 help='math to video', default=None)
+
     def parse(self, args=''):
         if args == '':
             opt = self.parser.parse_args()
