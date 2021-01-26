@@ -86,18 +86,28 @@ def write_results_score(filename, results, data_type):
 
 
 class TrackSaver(object):
-    def __init__(self, opt, dataloader, data_type, frame_rate=30, use_cuda=True):
+    def __init__(self, opt, dataloader, data_type, frame_rate=30, use_cuda=True, save_video_path=None):
         self.opt = opt
         self.dataloader = dataloader
         self.data_type = data_type
         self.use_cuda = use_cuda
         self.frame_rate = frame_rate
+        self.video_saver = None
+        if save_video_path is not None:
+            self.set_video_saver(save_video_path)
+
+    def set_video_saver(self, path):
+        self.video_saver = cv2.VideoWriter(path, -1, self.dataloader.frame_rate,
+                                           (self.dataloader.vw, self.dataloader.vh))
 
     def send_result(self, result, raw_img):
         pass
 
     def send_image(self, img0, online_tlwhs, online_ids, frame_id, fps):
-        return vis.plot_tracking(img0, online_tlwhs, online_ids, frame_id=frame_id, fps=fps)
+        online_im = vis.plot_tracking(img0, online_tlwhs, online_ids, frame_id=frame_id, fps=fps)
+        if self.video_saver is not None:
+            self.video_saver.write(online_im)
+        return online_im
 
     def eval(self, skip_frame=1, show_image=False):
         tracker = JDETracker(self.opt, frame_rate=self.frame_rate)
@@ -138,14 +148,15 @@ class TrackSaver(object):
                 online_im = self.send_image(img0, online_tlwhs, online_ids, frame_id,
                                             1. / max(1e-5, timer.average_time))
                 cv2.imshow('Result', online_im)
-
+        if self.video_saver is not None:
+            self.video_saver.release()
         return frame_id, timer.average_time, timer.calls
 
 
 class TrackSqlSaver(TrackSaver):
     def __init__(self, db_name: str, table_name: str, tracking_session_id: str, opt, dataloader, data_type: str,
-                 frame_rate: int = 30, use_cuda: bool = True):
-        TrackSaver.__init__(self, opt, dataloader, data_type, frame_rate, use_cuda)
+                 frame_rate: int = 30, use_cuda: bool = True, save_video_path = None):
+        TrackSaver.__init__(self, opt, dataloader, data_type, frame_rate, use_cuda, save_video_path)
         self.db_name = db_name
         self.table_name = table_name
         self.db = sqlite3.connect(self.db_name)

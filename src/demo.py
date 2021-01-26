@@ -25,7 +25,8 @@ def demo(opt):
                           dataloader=dataloader,
                           data_type="mot",
                           frame_rate=frame_rate,
-                          use_cuda=opt.gpus != [-1])
+                          use_cuda=opt.gpus != [-1],
+                          save_video_path=opt.output_file)
     saver.eval(show_image=opt.show_image)
 
 
