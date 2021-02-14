@@ -4,3 +4,5 @@ README.md
 assets/
 src/src/
 *.db
+*.jpg
+*.pth

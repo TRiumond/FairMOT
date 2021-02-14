@@ -3,3 +3,4 @@
 *.pth
 demos/*
 src/src/
+*.csv

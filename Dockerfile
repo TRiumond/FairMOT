@@ -107,5 +107,5 @@ RUN mkdir -p /home/user/.cache/torch/checkpoints/ \
 
 COPY --chown=user:user . /home/user
 WORKDIR /home/user/src
-RUN pip install -e git+https://github.com/CharlesShang/DCNv2@c7f778f28b84c66d3af2bf16f19148a07051dac1#egg=DCNv2 --user
+# RUN pip install -e git+https://github.com/CharlesShang/DCNv2@c7f778f28b84c66d3af2bf16f19148a07051dac1#egg=DCNv2 --user
 CMD ["/bin/bash"]

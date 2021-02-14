@@ -7,10 +7,10 @@ import os
 import os.path as osp
 import cv2
 import logging
-import argparse
 import motmetrics as mm
 import numpy as np
 import torch
+import pandas as pd
 
 from tracker.multitracker import JDETracker
 from tracking_utils import visualization as vis
@@ -155,7 +155,7 @@ class TrackSaver(object):
 
 class TrackSqlSaver(TrackSaver):
     def __init__(self, db_name: str, table_name: str, tracking_session_id: str, opt, dataloader, data_type: str,
-                 frame_rate: int = 30, use_cuda: bool = True, save_video_path = None):
+                 frame_rate: int = 30, use_cuda: bool = True, save_video_path=None):
         TrackSaver.__init__(self, opt, dataloader, data_type, frame_rate, use_cuda, save_video_path)
         self.db_name = db_name
         self.table_name = table_name
@@ -194,6 +194,27 @@ class TrackSqlSaver(TrackSaver):
                                                                                   scores,
                                                                                   enc))
         self.db.commit()
+
+
+class TackPandasSaver(TrackSaver):
+    def __init__(self, tracking_session_id: str, opt, dataloader, data_type: str,
+                 frame_rate: int = 30, use_cuda: bool = True, save_video_path=None, output_folder: str = None):
+        TrackSaver.__init__(self, opt, dataloader, data_type, frame_rate, use_cuda, save_video_path)
+        self.track_session_id = tracking_session_id
+        self.output_folder = output_folder
+
+    def send_result(self, result: dict, raw_img):
+        frame_id = result['frame_id']
+        result_data = []
+        for bounding_box, id, score in zip(result['bounding_box'], result['ids'], result['scores']):
+            x, y, w, h = bounding_box
+            tmp = {"x": x, 'y': y, 'w': w, 'h': h, 'id': id, 'score': score, 'frame_id': frame_id}
+            result_data.append(tmp)
+        path = "%s-%s.csv" % (self.track_session_id, frame_id)
+        if self.output_folder is not None:
+            path = os.path.join(self.output_folder, path)
+
+        pd.DataFrame(result_data).to_csv(path)
 
 
 def eval_seq(opt, dataloader, data_type, result_filename, save_dir=None, show_image=True, frame_rate=30, use_cuda=True):
