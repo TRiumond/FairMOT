@@ -66,9 +66,9 @@ RUN /home/user/miniconda/bin/conda install conda-build=3.18.9=py36_3 \
 
 # CUDA 10.0-specific steps
 RUN conda list --revision
-RUN conda install
+RUN conda install package=version
 RUN conda list --revision
-RUN conda install conda-4.9.2
+RUN conda install conda=4.9.2
 RUN conda list --revision
 
 RUN conda install -y -c pytorch \
