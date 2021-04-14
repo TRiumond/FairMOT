@@ -68,8 +68,8 @@ RUN /home/user/miniconda/bin/conda install conda-build=3.18.9=py36_3 \
 RUN conda install -y -c pytorch \
     cudatoolkit=10.0 \
     "pytorch=1.2.0=py3.6_cuda10.0.130_cudnn7.6.2_0" \
-    "torchvision=0.4.0=py36_cu100" \
- && conda clean -ya
+    "torchvision=0.4.0=py36_cu100" 
+#  && conda clean -ya
 
 # Install HDF5 Python bindings
 RUN conda install -y h5py=2.8.0 \
